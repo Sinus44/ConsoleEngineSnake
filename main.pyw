@@ -2,162 +2,249 @@ from Engine import *
 import time
 import random
 
-directions = {
-	"left": (-1, 0),
-	"right": (1, 0),
-	"up": (0, -1),
-	"down": (0, 1),
-	"pause": (0, 0)
-}
+class Menu(Scene):
+	def select(self):
+		self.frame = Frame(window=self.window, style=self.style)
+		self.border = Border(window=self.window, style=self.style)
 
-main_window = Window(40, 20)
-time.sleep(1)
-main_window.set_icon("snake.ico")
+		self.title_label = Label(window=self.window, x=self.window.w // 2 - 4, y=3, text=f"Snake Game", style=self.style)
+		self.start_button = Button(window=self.window, x=self.window.w // 2  - 3, y=6, text="Start", style=self.style, on_left_click=self.start_button_left_click)
+		self.options_button = Button(window=self.window, x=self.window.w // 2 - 4, y=8, text="Options", style=self.style, on_left_click=self.options_button_left_click)
+		self.quit_button = Button(window=self.window, x=self.window.w // 2 - 2, y=10, text="Quit", style=self.style, on_left_click=self.quit_button_left_click)
 
-game_fps = 100
+	def start_button_left_click(self, event):
+		self.scene_control.set("game")
 
-def is_snake(pos, snake):
-	for segment in snake:
-		if segment["x"] == pos["x"] and segment["y"] == pos["y"]:
-			return True
-	return False
+	def quit_button_left_click(self, event):
+		self.app.enable = False
 
-def generate_apple(window, apple, snake):
-	apple["x"] = random.randint(0, window.w - 1)
-	apple["y"] = random.randint(0, window.h - 1)
-	if is_snake(apple, snake):
-		generate_apple(window, apple, snake)
+	def options_button_left_click(self, event):
+		self.scene_control.set("options")
 
-def on_board(pos, window):
-	if pos["x"] >= 0 and pos["x"] < window.w and pos["y"] >= 0 and pos["y"] < window.h:
-		return True
-	return False
+	def play(self):
+		for event in self.window.input_tick():
+			self.title_label.event(event)
+			self.start_button.event(event)
+			self.options_button.event(event)
+			self.quit_button.event(event)
 
-def start_game():
-	keys = {}
-	apple = {"x": 0, "y": 0}
-	enable = True
-	frame_count = 0
-	question = True
-	pause = False
-	speed = 8
-	main_window.set_title("Snake on Console Engine")
-
-	direction = directions["pause"]
-	current_direction = direction
-
-	snake = [{"x": main_window.w // 2, "y": main_window.h // 2}]
-	generate_apple(main_window, apple, snake)
-
-	while enable:
-		#time.sleep(1 / game_fps)
-		time.sleep(1 / game_fps if direction == directions["left"] or direction == directions["right"] else 1 / game_fps * 2)
-
-		main_window.fill(Color.default + " ")
-		for event in main_window.input_tick():
 			if event["type"] == "exit":
-				quit()
+				self.app.enable = False
+
+		self.frame.draw()
+		self.border.draw()
+		self.title_label.draw()
+		self.start_button.draw()
+		self.options_button.draw()
+		self.quit_button.draw()
+		self.window.print()
+
+class Game(Scene):
+	def select(self):
+		self.directions = {
+			"left": (-1, 0),
+			"right": (1, 0),
+			"up": (0, -1),
+			"down": (0, 1),
+			"pause": (0, 0)
+		}
+
+		self.keys = {}
+		self.key_changed = True
+		self.apple = {"x": 0, "y": 0}
+		self.frame_count = 0
+		self.question = True
+		self.pause = False
+		self.speed = 8
+		self.direction = self.directions["pause"]
+		self.current_direction = self.direction
+
+		self.snake = [{"x": self.window.w // 2, "y": self.window.h // 2}]
+		self.generate_apple()
+
+	def generate_apple(self):
+		self.apple["x"] = random.randint(0, self.window.w - 1)
+		self.apple["y"] = random.randint(0, self.window.h - 1)
+		if self.is_snake(self.apple):
+			self.generate_apple()
+
+	def is_snake(self, pos):
+		for segment in self.snake:
+			if segment["x"] == pos["x"] and segment["y"] == pos["y"]:
+				return True
+		return False
+
+	def on_board(self, pos):
+		if pos["x"] >= 0 and pos["x"] < self.window.w and pos["y"] >= 0 and pos["y"] < self.window.h:
+			return True
+		return False
+
+	def play(self):
+		self.window.fill(Color.default + " ")
+
+		for event in self.window.input_tick():
+			if event["type"] == "exit":
+				self.app.enable = False
 
 			elif event["type"] == "keyboard":
-				key_changed = (event["key_state"] != keys[event["key_code"]]) if event["key_code"] in keys else False
-				keys[event["key_code"]] = event["key_state"] 
+				self.key_changed = (event["key_state"] != self.keys[event["key_code"]]) if event["key_code"] in self.keys else True
+				self.keys[event["key_code"]] = event["key_state"] 
 
-				print(keys)
-				if not pause:
-					if 83 in keys and keys[83]:
-						direction = directions["down"]
+				if not self.pause:
+					if 83 in self.keys and self.keys[83]:
+						self.direction = self.directions["down"]
 
-					if 87 in keys and keys[87]:
-						direction = directions["up"]
+					if 87 in self.keys and self.keys[87]:
+						self.direction = self.directions["up"]
 
-					if 65 in keys and keys[65]:
-						direction = directions["left"]
+					if 65 in self.keys and self.keys[65]:
+						self.direction = self.directions["left"]
 
-					if 68 in keys and keys[68]:
-						direction = directions["right"]
+					if 68 in self.keys and self.keys[68]:
+						self.direction = self.directions["right"]
 
-				if 32 in keys and keys[32] and key_changed:
-					pause = not pause
+				if 32 in self.keys and self.keys[32] and self.key_changed:
+					self.pause = not self.pause
 
-		if not pause:
-			if frame_count > 3 and direction != directions["pause"]:
-				if (current_direction == directions["left"] or current_direction == directions["pause"]) and direction != directions["right"]:
-					current_direction = direction
+		if not self.pause:
+			if self.frame_count > 21 - min(max(self.app.hardness, 0), 20) and self.direction != self.directions["pause"]:
+				if (self.current_direction == self.directions["left"] or self.current_direction == self.directions["pause"]) and self.direction != self.directions["right"]:
+					self.current_direction = self.direction
 
-				if (current_direction == directions["right"] or current_direction == directions["pause"]) and direction != directions["left"]:
-					current_direction = direction
+				if (self.current_direction == self.directions["right"] or self.current_direction == self.directions["pause"]) and self.direction != self.directions["left"]:
+					self.current_direction = self.direction
 
-				if (current_direction == directions["down"] or current_direction == directions["pause"]) and direction != directions["up"]:
-					current_direction = direction
+				if (self.current_direction == self.directions["down"] or self.current_direction == self.directions["pause"]) and self.direction != self.directions["up"]:
+					self.current_direction = self.direction
 
-				if (current_direction == directions["up"] or current_direction == directions["pause"]) and direction != directions["down"]:
-					current_direction = direction
+				if (self.current_direction == self.directions["up"] or self.current_direction == self.directions["pause"]) and self.direction != self.directions["down"]:
+					self.current_direction = self.direction
 
-				print(current_direction, direction)
-
-				new_pos = {"x": snake[0]["x"] + current_direction[0], "y": snake[0]["y"] + current_direction[1]}
+				new_pos = {"x": self.snake[0]["x"] + self.current_direction[0], "y": self.snake[0]["y"] + self.current_direction[1]}
 				
-				if is_snake(new_pos, snake) or not on_board(new_pos, main_window):
-					main_window.set_title("You lose")
-					enable = False
+				if self.is_snake(new_pos) or (not self.on_board(new_pos) and self.app.walls):
+					self.window.set_title(f"You lose, Score {len(self.snake)}")
+					self.scene_control.set("menu")
 
-				snake.insert(0, new_pos)
+				self.snake.insert(0, new_pos)
 				
-				if apple != new_pos:
-					snake.pop()
+				if self.apple != new_pos:
+					self.snake.pop()
 
 				else:
-					if len(snake) == main_window.w * main_window.h:
-						main_window.set_title("You win")
-						enable = False
-					main_window.set_title(f"Score: {len(snake)}")
-					generate_apple(main_window, apple, snake)
+					if len(self.snake) == self.window.w * self.window.h:
+						self.window.set_title("You win")
+						self.scene_control.set("menu")
+					self.window.set_title(f"Score: {len(self.snake)}")
+					self.generate_apple()
 
-				frame_count = 0
-				direction_changed = False
+				self.frame_count = 0
+				self.direction_changed = False
 
 			# Apple
-			main_window.point(apple["x"], apple["y"], Color.rgb_background(255, 0, 0) + Color.rgb_text(255, 255, 255) + "O")
+			self.window.point(self.apple["x"], self.apple["y"], Color.rgb_background(255, 0, 0) + Color.rgb_text(255, 255, 255) + "O")
 
 			# Head
-			main_window.point(snake[0]["x"], snake[0]["y"], Color.rgb_background(0, 180, 0) + Color.rgb_text(0, 0, 0) +":")
+			self.window.point(self.snake[0]["x"], self.snake[0]["y"], Color.rgb_background(0, 180, 0) + Color.rgb_text(0, 0, 0) + ":")
 
 			# Body
-			for segment in snake[1:]:
-				main_window.point(segment["x"], segment["y"], Color.rgb_background(0, 255, 0) + Color.rgb_text(0, 100, 0) + "8")
+			for segment in self.snake[1:]:
+				self.window.point(segment["x"], segment["y"], Color.rgb_background(0, 255, 0) + Color.rgb_text(0, 100, 0) + "8")
 
-			main_window.print()
-			frame_count += 1
+			self.window.print()
+			self.frame_count += 1
 
-	score_label = Label(screen=main_window, x=10, y=5, text=f"Ваш счёт {len(snake)}", style=Style())
-	yes_button = Button(screen=main_window, x=5, y=main_window.h // 2, text = "YES", style=Style())
-	no_button = Button(screen=main_window, x=20, y=main_window.h // 2, text = "NO", style=Style())
+class Options(Scene):
+	def select(self):
+		self.frame = Frame(window=self.window, style=self.style)
+		self.border = Border(window=self.window, style=self.style)
+		self.back_button = Button(window=self.window, x=1, y=1, text="Back", style=self.style, on_left_click=self.back_button_left_click)
+		self.hardness_label_hint = Label(window=self.window, x=1, y=3, text="Hardness: ", style=self.style)
+		self.hardness_label = Label(window=self.window, x=12, y=3, style=self.style)
+		
+		self.hardness_sub_button = Button(window=self.window, x=11, y=3, style=self.style, on_left_click=self.hardness_sub_button_left_click)
+		self.hardness_sub_button.format = lambda: "-"
+		
+		self.hardness_add_button = Button(window=self.window, x=14, y=3, style=self.style, on_left_click=self.hardness_add_button_left_click)
+		self.hardness_add_button.format = lambda: "+"
 
-	while question:
+		self.walls_checkbox = Checkbox(window=self.window, x=1, y=5, text="Walls", style=self.style, checked=self.app.walls, on_change=self.walls_checkbox_change)
+
+		self.mouse_key = -1
+
+	def back_button_left_click(self, event):
+		self.scene_control.set("menu")
+
+	def hardness_sub_button_left_click(self, event):
+		self.app.hardness -= 1
+		if self.app.hardness < 2:
+			self.hardness_sub_button.block()
+		else:
+			self.hardness_add_button.enable = True
+
+	def hardness_add_button_left_click(self, event):
+		self.app.hardness += 1
+		if self.app.hardness > 19:
+			self.hardness_add_button.block()
+		else:
+			self.hardness_sub_button.enable = True
+
+	def walls_checkbox_change(self, event):
+		#self.walls_checkbox.click()
+		self.app.walls = bool(self.walls_checkbox)
+
+	def play(self):
+		for event in self.window.input_tick():
+			self.back_button.event(event)
+			self.hardness_sub_button.event(event)
+			self.hardness_add_button.event(event)
+			self.walls_checkbox.event(event)
+
+			if event["type"] == "exit":
+				self.app.enable = False
+
+		self.hardness_label.text = self.app.hardness
+
+		self.frame.draw()
+		self.border.draw()
+
+		self.hardness_label_hint.draw()
+		self.hardness_sub_button.draw()
+		self.hardness_add_button.draw()
+		self.hardness_label.draw()
+		self.walls_checkbox.draw()
+
+		self.back_button.draw()
+		self.window.print()
+
+class SnakeGame:
+	def __init__(self, w:int=40, h:int=20, hardness:int=15):
+		self.hardness = hardness
+		self.enable = False
+		self.walls = True
+		self.style = Style()
+
+		self.window = Window(w, h)
 		time.sleep(0.1)
+		self.window.set_icon("snake.ico")
+		self.window.set_title("Snake on Console Engine")
 
-		for event in main_window.input_tick():
-			if event["type"] == "mouse":
-				yes_button.intersection(event["x"], event["y"])
-				no_button.intersection(event["x"], event["y"])
+		self.scene_control = Scene_Control()
+		self.scene_control.add_from_dict({
+			"menu": Menu(window=self.window, scene_control=self.scene_control, app=self, style=self.style),
+			"game": Game(window=self.window, scene_control=self.scene_control, app=self, style=self.style),
+			"options": Options(window=self.window, scene_control=self.scene_control, app=self, style=self.style)
+		})
 
-				if event["mouse_type"] == 0 and event["mouse_key"] == 1:
-					if yes_button.focused:
-						question = False
-						start_game()
+		self.scene_control.set("menu")
 
-					if no_button.focused:
-						question = False
-						quit()
-
-		main_window.fill(Color.default + " ")
-
-		yes_button.draw()
-		no_button.draw()
-		score_label.draw()
-
-		main_window.text(10, 3, "Начать заново?")
-		main_window.print()
+	def run(self):
+		self.enable = True
+		while self.enable:
+			time.sleep(0.01)
+			self.scene_control.play()
 
 if __name__ == "__main__":
-	start_game()
+	snake_game = SnakeGame()
+	snake_game.run()
+
