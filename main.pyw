@@ -16,12 +16,12 @@ class Menu(Scene):
 		self.scene_control.set("game")
 
 	def quit_button_left_click(self, event):
-		self.app.enable = False
+		self.app.stop()
 
 	def options_button_left_click(self, event):
 		self.scene_control.set("options")
 
-	def play(self):
+	def draw(self):
 		for event in self.window.input_tick():
 			self.title_label.event(event)
 			self.start_button.event(event)
@@ -79,8 +79,8 @@ class Game(Scene):
 			return True
 		return False
 
-	def play(self):
-		self.window.fill(Color.default + " ")
+	def draw(self):
+		self.window.fill(Symbol(background_color=Color.default, char=" "))
 
 		for event in self.window.input_tick():
 			if event["type"] == "exit":
@@ -142,14 +142,14 @@ class Game(Scene):
 				self.direction_changed = False
 
 			# Apple
-			self.window.point(self.apple["x"], self.apple["y"], Color.rgb_background(255, 0, 0) + Color.rgb_text(255, 255, 255) + "O")
+			self.window.point(self.apple["x"], self.apple["y"], Symbol(background_color=Color.rgb_background(255, 0, 0), text_color= Color.rgb_text(255, 255, 255), char="O"))
 
 			# Head
-			self.window.point(self.snake[0]["x"], self.snake[0]["y"], Color.rgb_background(0, 180, 0) + Color.rgb_text(0, 0, 0) + ":")
+			self.window.point(self.snake[0]["x"], self.snake[0]["y"], Symbol(background_color=Color.rgb_background(0, 180, 0), text_color=Color.rgb_text(0, 0, 0), char=":"))
 
 			# Body
 			for segment in self.snake[1:]:
-				self.window.point(segment["x"], segment["y"], Color.rgb_background(0, 255, 0) + Color.rgb_text(0, 100, 0) + "8")
+				self.window.point(segment["x"], segment["y"], Symbol(background_color=Color.rgb_background(0, 255, 0), text_color=Color.rgb_text(0, 100, 0), char="8"))
 
 			self.window.print()
 			self.frame_count += 1
@@ -193,7 +193,7 @@ class Options(Scene):
 		#self.walls_checkbox.click()
 		self.app.walls = bool(self.walls_checkbox)
 
-	def play(self):
+	def draw(self):
 		for event in self.window.input_tick():
 			self.back_button.event(event)
 			self.hardness_sub_button.event(event)
@@ -239,12 +239,14 @@ class SnakeGame:
 		self.scene_control.set("menu")
 
 	def run(self):
-		self.enable = True
-		while self.enable:
-			time.sleep(0.01)
+		if not self.enable:
+			self.enable = True
 			self.scene_control.play()
 
+	def stop(self):
+		self.scene_control.stop()
+
 if __name__ == "__main__":
+
 	snake_game = SnakeGame()
 	snake_game.run()
-
